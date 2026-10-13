@@ -1,0 +1,6 @@
+{
+  "name": "Evaluasi Guru Qur'an MTQ Darul Abidin",
+  "description": "Aplikasi Evaluasi & Visualisasi Grafik Kompetensi Guru Al-Qur'an Bermutu dengan 9 Kriteria MTQ Darul Abidin, Radar Chart, Tracking Perkembangan, dan Rekomendasi Pembinaan.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

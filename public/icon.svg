@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stopColor="#064e3b" />
+      <stop offset="50%" stopColor="#047857" />
+      <stop offset="100%" stopColor="#0f766e" />
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stopColor="#fde047" />
+      <stop offset="100%" stopColor="#d97706" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="128" fill="url(#bgGrad)" />
+  <circle cx="256" cy="256" r="210" fill="none" stroke="url(#goldGrad)" stroke-width="6" stroke-dasharray="16,8" opacity="0.6"/>
+  <circle cx="256" cy="256" r="190" fill="none" stroke="#ffffff" stroke-width="2" opacity="0.4"/>
+  <!-- Open Quran Book Icon -->
+  <g transform="translate(136, 150) scale(2.4)" fill="none" stroke="#ffffff" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+    <path d="M6 6h10"/>
+    <path d="M6 10h10"/>
+  </g>
+  <text x="256" y="380" font-family="'Plus Jakarta Sans', sans-serif" font-size="34" font-weight="900" fill="#fde047" text-anchor="middle" letter-spacing="3">MTQ DARUL ABIDIN</text>
+  <text x="256" y="415" font-family="'Plus Jakarta Sans', sans-serif" font-size="20" font-weight="600" fill="#ffffff" text-anchor="middle" opacity="0.9">EVALUASI GURU QUR'AN</text>
+</svg>
