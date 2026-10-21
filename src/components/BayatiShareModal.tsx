@@ -72,6 +72,8 @@ export const BayatiShareModal: React.FC<BayatiShareModalProps> = ({
         `🎼 *Fokus Nada:* ${activeStage.focusTone}\n` +
         `📊 *Status:* ${statusText}\n` +
         `⭐ *Nilai:* ${score > 0 ? `${score} / 100` : '-'}\n` +
+        (submission.musyrifName ? `👨‍🏫 *Musyrif Penguji:* ${submission.musyrifName}\n` : '') +
+        (submission.submissionDate ? `📅 *Tanggal Setor:* ${submission.submissionDate}\n` : '') +
         `📝 *Catatan Supervisor:*\n` +
         `"${submission.evaluatorNotes || 'Tetap istiqamah menjaga keindahan tartil dan nada Bayati terstandar.'}"\n` +
         `━━━━━━━━━━━━━━━━━━━━\n\n` +

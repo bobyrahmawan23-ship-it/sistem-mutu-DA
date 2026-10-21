@@ -8,6 +8,13 @@ import {
   resetStoredReportConfig,
 } from '../types/reportConfig';
 import {
+  MusyrifProfile,
+  getStoredMusyrifList,
+  saveStoredMusyrifList,
+  resetStoredMusyrifList,
+  formatWhatsAppUrl,
+} from '../types/musyrif';
+import {
   Users,
   Sliders,
   Smartphone,
@@ -29,6 +36,9 @@ import {
   FileSignature,
   Sparkles,
   RotateCcw,
+  MessageCircle,
+  Phone,
+  ExternalLink,
 } from 'lucide-react';
 
 interface SettingsDashboardProps {
@@ -46,7 +56,103 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
   onUpdateCriteria,
   onResetDefaults,
 }) => {
-  const [activeTab, setActiveTab] = useState<'TEACHERS' | 'CRITERIA_ASPECTS' | 'REPORT_SETTINGS' | 'MOBILE_PWA'>('TEACHERS');
+  const [activeTab, setActiveTab] = useState<
+    'TEACHERS' | 'MUSYRIF_DATA' | 'CRITERIA_ASPECTS' | 'REPORT_SETTINGS' | 'MOBILE_PWA'
+  >('TEACHERS');
+
+  // Musyrif management state
+  const [musyrifs, setMusyrifs] = useState<MusyrifProfile[]>(() => getStoredMusyrifList());
+  const [editingMusyrifId, setEditingMusyrifId] = useState<string | null>(null);
+  const [musyrifFormData, setMusyrifFormData] = useState<Partial<MusyrifProfile>>({});
+  const [isAddingMusyrif, setIsAddingMusyrif] = useState(false);
+
+  useEffect(() => {
+    const handleMusyrifUpdate = (e: Event) => {
+      const customEvent = e as CustomEvent<MusyrifProfile[]>;
+      if (customEvent.detail) {
+        setMusyrifs(customEvent.detail);
+      }
+    };
+    window.addEventListener('mtq_musyrif_updated', handleMusyrifUpdate);
+    return () => window.removeEventListener('mtq_musyrif_updated', handleMusyrifUpdate);
+  }, []);
+
+  const handleStartEditMusyrif = (m: MusyrifProfile) => {
+    setEditingMusyrifId(m.id);
+    setMusyrifFormData({ ...m });
+    setIsAddingMusyrif(false);
+  };
+
+  const handleSaveMusyrifEdit = () => {
+    if (!editingMusyrifId) return;
+    const updated = musyrifs.map((m) =>
+      m.id === editingMusyrifId ? ({ ...m, ...musyrifFormData } as MusyrifProfile) : m
+    );
+    setMusyrifs(updated);
+    saveStoredMusyrifList(updated);
+    setEditingMusyrifId(null);
+    setMusyrifFormData({});
+    showToast('Data musyrif & nomor WhatsApp berhasil diperbarui');
+  };
+
+  const handleSaveNewMusyrif = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!musyrifFormData.name) return;
+
+    const newMusyrif: MusyrifProfile = {
+      id: `msy_${Date.now()}`,
+      nip:
+        musyrifFormData.nip ||
+        `MSY-MTQ-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`,
+      name: musyrifFormData.name,
+      title: musyrifFormData.title || 'M.Ag.',
+      phone: musyrifFormData.phone || '0812-0000-0000',
+      specialization:
+        musyrifFormData.specialization || 'Musyrif Pembimbing Irama Bayati & Standarisasi Maqdis',
+      unit: musyrifFormData.unit || 'SEMUA',
+      email:
+        musyrifFormData.email ||
+        `${musyrifFormData.name.toLowerCase().replace(/[\s,.]+/g, '.')}@darulabidin.sch.id`,
+      isActive: musyrifFormData.isActive !== undefined ? musyrifFormData.isActive : true,
+      notes:
+        musyrifFormData.notes ||
+        'Penerima setoran rekaman tilawah irama Bayati & penilai sub-aspek guru',
+    };
+
+    const updated = [...musyrifs, newMusyrif];
+    setMusyrifs(updated);
+    saveStoredMusyrifList(updated);
+    setIsAddingMusyrif(false);
+    setMusyrifFormData({});
+    showToast('Musyrif baru & nomor WhatsApp berhasil ditambahkan');
+  };
+
+  const handleDeleteMusyrif = (id: string, name: string) => {
+    if (confirm(`Yakin ingin menghapus data musyrif ${name}?`)) {
+      const updated = musyrifs.filter((m) => m.id !== id);
+      setMusyrifs(updated);
+      saveStoredMusyrifList(updated);
+      showToast('Data musyrif berhasil dihapus');
+    }
+  };
+
+  const handleResetMusyrifList = () => {
+    if (
+      confirm(
+        'Kembalikan daftar musyrif dan nomor WhatsApp resmi ke standar bawaan MTQ Darul Abidin?'
+      )
+    ) {
+      const def = resetStoredMusyrifList();
+      setMusyrifs(def);
+      showToast('Daftar musyrif berhasil direset ke standar bawaan');
+    }
+  };
+
+  const handleTestWhatsAppMusyrif = (phone: string, name: string) => {
+    const msg = `Assalamu'alaikum Warahmatullahi Wabarakatuh, Yth. ${name}. Ini adalah pesan uji verifikasi nomor WhatsApp Musyrif dari Sistem Manajemen Mutu MTQ Darul Abidin untuk penerimaan setoran rekaman irama Bayati guru.`;
+    const url = formatWhatsAppUrl(phone, msg);
+    window.open(url, '_blank');
+  };
 
   // Report config state
   const [reportConfig, setReportConfig] = useState<ReportTextConfig>(() => getStoredReportConfig());
@@ -252,6 +358,19 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
         >
           <Users className="w-4 h-4" />
           <span>Manajemen Guru ({teachers.length})</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('MUSYRIF_DATA')}
+          className={`px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all cursor-pointer ${
+            activeTab === 'MUSYRIF_DATA'
+              ? 'bg-emerald-700 text-white shadow-xs'
+              : 'text-slate-600 hover:bg-slate-100'
+          }`}
+        >
+          <UserCheck className="w-4 h-4" />
+          <span>Data Musyrif & No. WA ({musyrifs.length})</span>
         </button>
 
         <button
@@ -675,7 +794,339 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
         </div>
       )}
 
-      {/* TAB 2: CRITERIA & SUB-ASPECTS CONFIGURATOR */}
+      {/* TAB 2: MUSYRIF DATA & WHATSAPP MANAGEMENT */}
+      {activeTab === 'MUSYRIF_DATA' && (
+        <div className="space-y-5">
+          {/* Header Card */}
+          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="p-1.5 rounded-lg bg-emerald-100 text-emerald-800">
+                  <UserCheck className="w-4 h-4" />
+                </span>
+                <h3 className="text-sm font-bold text-slate-900">
+                  Data Musyrif MTQ & Nomor WhatsApp Penguji
+                </h3>
+              </div>
+              <p className="text-xs text-slate-500 mt-1 max-w-2xl leading-relaxed">
+                Kelola daftar musyrif dan nomor WhatsApp resmi untuk penerimaan setoran rekaman tilawah serta penilaian sub-aspek irama Bayati. Nomor WhatsApp yang terdaftar di sini dapat langsung dikirimi hasil nilai dengan 1 klik dari Dasbor Bayati.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsAddingMusyrif(!isAddingMusyrif);
+                  setEditingMusyrifId(null);
+                  setMusyrifFormData({});
+                }}
+                className="px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>{isAddingMusyrif ? 'Tutup Form' : 'Tambah Musyrif Baru'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleResetMusyrifList}
+                className="px-3.5 py-2 rounded-xl border border-slate-300 hover:bg-slate-100 text-slate-700 font-semibold text-xs flex items-center gap-1.5 cursor-pointer"
+                title="Pulihkan daftar musyrif standar bawaan MTQ"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
+                <span>Reset Musyrif</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Form Tambah / Edit Musyrif */}
+          {(isAddingMusyrif || editingMusyrifId) && (
+            <form
+              onSubmit={
+                isAddingMusyrif
+                  ? handleSaveNewMusyrif
+                  : (e) => {
+                      e.preventDefault();
+                      handleSaveMusyrifEdit();
+                    }
+              }
+              className="bg-emerald-50/50 border border-emerald-200 rounded-2xl p-5 shadow-xs space-y-4 text-xs animate-fade-in"
+            >
+              <div className="flex items-center justify-between border-b border-emerald-200/80 pb-2.5">
+                <h4 className="font-bold text-emerald-950 text-sm flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-emerald-700" />
+                  <span>
+                    {editingMusyrifId ? 'Edit Data Musyrif & No. WhatsApp' : 'Form Tambah Musyrif Baru'}
+                  </span>
+                </h4>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsAddingMusyrif(false);
+                    setEditingMusyrifId(null);
+                    setMusyrifFormData({});
+                  }}
+                  className="text-slate-400 hover:text-slate-600 font-bold"
+                >
+                  Batal ✕
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="sm:col-span-2">
+                  <label className="block font-bold text-slate-700 mb-1">
+                    Nama Lengkap Musyrif: <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={musyrifFormData.name || ''}
+                    onChange={(e) => setMusyrifFormData({ ...musyrifFormData, name: e.target.value })}
+                    placeholder="Contoh: Drs. H. Syamsul Arifin"
+                    className="w-full p-2 bg-white border border-slate-300 rounded-lg text-slate-900 font-bold focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Gelar / Gelar Tambahan:</label>
+                  <input
+                    type="text"
+                    value={musyrifFormData.title || ''}
+                    onChange={(e) => setMusyrifFormData({ ...musyrifFormData, title: e.target.value })}
+                    placeholder="Contoh: M.Ag., Master Trainer"
+                    className="w-full p-2 bg-white border border-slate-300 rounded-lg text-slate-900 focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">NIP / Kode Penguji:</label>
+                  <input
+                    type="text"
+                    value={musyrifFormData.nip || ''}
+                    onChange={(e) => setMusyrifFormData({ ...musyrifFormData, nip: e.target.value })}
+                    placeholder="Contoh: MSY-MTQ-2021-001"
+                    className="w-full p-2 bg-white border border-slate-300 rounded-lg font-mono text-slate-900 focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-emerald-950 mb-1 flex items-center gap-1.5">
+                    <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Nomor WhatsApp Resmi (Wajib):</span> <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={musyrifFormData.phone || ''}
+                    onChange={(e) => setMusyrifFormData({ ...musyrifFormData, phone: e.target.value })}
+                    placeholder="Contoh: 0812-9876-5432 atau 62812..."
+                    className="w-full p-2 bg-white border-2 border-emerald-400 rounded-lg font-mono font-bold text-emerald-900 focus:ring-2 focus:ring-emerald-500"
+                  />
+                  <span className="text-[10px] text-slate-500 mt-0.5 block">
+                    Digunakan untuk pengiriman laporan setoran & penilaian nilai per-sub langsung.
+                  </span>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Unit Binaan:</label>
+                  <select
+                    value={musyrifFormData.unit || 'SEMUA'}
+                    onChange={(e) => setMusyrifFormData({ ...musyrifFormData, unit: e.target.value })}
+                    className="w-full p-2 bg-white border border-slate-300 rounded-lg font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500"
+                  >
+                    <option value="SEMUA">Semua Unit (Lintas Lembaga)</option>
+                    <option value="SD">Unit SD</option>
+                    <option value="SMP">Unit SMP</option>
+                    <option value="SMA">Unit SMA</option>
+                    <option value="SD & SMP">Unit SD & SMP</option>
+                    <option value="SMP & SMA">Unit SMP & SMA</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Spesialisasi / Tugas Penguji:</label>
+                  <input
+                    type="text"
+                    value={musyrifFormData.specialization || ''}
+                    onChange={(e) =>
+                      setMusyrifFormData({ ...musyrifFormData, specialization: e.target.value })
+                    }
+                    placeholder="Contoh: Master Trainer Nagham Bayati & Penguji Tahsin"
+                    className="w-full p-2 bg-white border border-slate-300 rounded-lg text-slate-900 focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Email Resmi (Opsional):</label>
+                  <input
+                    type="email"
+                    value={musyrifFormData.email || ''}
+                    onChange={(e) => setMusyrifFormData({ ...musyrifFormData, email: e.target.value })}
+                    placeholder="Contoh: musyrif@darulabidin.sch.id"
+                    className="w-full p-2 bg-white border border-slate-300 rounded-lg text-slate-900 focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Catatan Penugasan & Keterangan:</label>
+                <input
+                  type="text"
+                  value={musyrifFormData.notes || ''}
+                  onChange={(e) => setMusyrifFormData({ ...musyrifFormData, notes: e.target.value })}
+                  placeholder="Keterangan penugasan pembimbingan irama Bayati..."
+                  className="w-full p-2 bg-white border border-slate-300 rounded-lg text-slate-900 focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-emerald-200">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsAddingMusyrif(false);
+                    setEditingMusyrifId(null);
+                    setMusyrifFormData({});
+                  }}
+                  className="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-200 font-bold"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold flex items-center gap-1.5 shadow-xs cursor-pointer"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  <span>{editingMusyrifId ? 'Simpan Perubahan Musyrif' : 'Simpan Musyrif Baru'}</span>
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* Musyrif Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {musyrifs.map((m) => {
+              return (
+                <div
+                  key={m.id}
+                  className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs hover:shadow-md transition-all flex flex-col justify-between space-y-3 relative group"
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-700 to-teal-800 text-white flex items-center justify-center font-bold text-sm shadow-xs shrink-0">
+                          {m.name.charAt(0)}
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-slate-900 text-xs sm:text-sm leading-tight">
+                            {m.name}
+                          </h4>
+                          <span className="text-[10px] text-emerald-800 font-semibold block">
+                            {m.title}
+                          </span>
+                        </div>
+                      </div>
+
+                      <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-mono shrink-0">
+                        {m.nip}
+                      </span>
+                    </div>
+
+                    <div className="bg-slate-50 rounded-xl p-2.5 border border-slate-100 space-y-1.5 text-[11px]">
+                      <div className="text-slate-700">
+                        <strong className="text-slate-900 font-semibold">Tugas:</strong> {m.specialization}
+                      </div>
+                      <div className="flex items-center justify-between text-[10px]">
+                        <span className="text-slate-500">
+                          Unit: <strong className="text-slate-700">{m.unit}</strong>
+                        </span>
+                        <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 font-bold">
+                          {m.isActive ? 'Aktif Menguji' : 'Non-aktif'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* WhatsApp Number Highlight */}
+                    <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                          <MessageCircle className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <span className="text-[9px] text-emerald-700 uppercase font-extrabold tracking-wider block">
+                            WhatsApp Musyrif:
+                          </span>
+                          <span className="font-black text-xs text-slate-900 font-mono">
+                            {m.phone}
+                          </span>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleTestWhatsAppMusyrif(m.phone, m.name)}
+                        className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer shadow-2xs"
+                        title="Tes kirim pesan verifikasi via WhatsApp"
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        <span>Tes WA</span>
+                      </button>
+                    </div>
+
+                    {m.notes && (
+                      <p className="text-[10px] text-slate-500 italic px-1">
+                        "{m.notes}"
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Action buttons */}
+                  <div className="pt-2 border-t border-slate-100 flex items-center justify-end gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => handleStartEditMusyrif(m)}
+                      className="px-2.5 py-1.5 rounded-lg text-slate-700 hover:bg-slate-100 font-bold text-[11px] inline-flex items-center gap-1 cursor-pointer transition-colors"
+                    >
+                      <Edit2 className="w-3 h-3 text-slate-500" />
+                      <span>Edit</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteMusyrif(m.id, m.name)}
+                      className="px-2.5 py-1.5 rounded-lg text-rose-600 hover:bg-rose-50 font-bold text-[11px] inline-flex items-center gap-1 cursor-pointer transition-colors"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      <span>Hapus</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Informational Guidance Box */}
+          <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-50 via-teal-50 to-slate-50 border border-emerald-200 text-xs text-slate-700 flex items-start gap-3">
+            <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 mt-0.5">
+              <Info className="w-4 h-4" />
+            </div>
+            <div className="space-y-1">
+              <h5 className="font-bold text-slate-900">
+                Cara Kerja Pengiriman Hasil Setoran Rekaman ke Nomor WhatsApp Musyrif:
+              </h5>
+              <p className="text-[11px] text-slate-600 leading-relaxed">
+                1. Setiap guru yang mengikuti sertifikasi irama Bayati dapat dipasangkan dengan Musyrif Pembimbing di atas.<br />
+                2. Saat membuka <strong>Dasbor Sertifikasi Bayati</strong> dan mengklik <strong>"Setoran & Nilai Sub"</strong> atau <strong>"WA Musyrif"</strong>, sistem langsung memuat nomor WhatsApp terdaftar di atas.<br />
+                3. Pesan WhatsApp sudah otomatis terformat rapi berisi rincian: Status Pengiriman Rekaman, Nilai 4 Sub-Aspek, Skor Rata-rata, Status Kelulusan, dan Catatan Evaluasi untuk Musyrif.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 3: CRITERIA & SUB-ASPECTS CONFIGURATOR */}
       {activeTab === 'CRITERIA_ASPECTS' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* Left Column: 9 Criteria List */}

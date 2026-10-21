@@ -9,6 +9,7 @@ import { BAYATI_STAGES } from '../data/bayatiCertificationData';
 import { BayatiShareModal } from './BayatiShareModal';
 import { BayatiCertificateModal } from './BayatiCertificateModal';
 import { BayatiToneWaveDiagram } from './BayatiToneWaveDiagram';
+import { MusyrifSubmissionModal } from './MusyrifSubmissionModal';
 import { exportElementAsPng } from '../utils/exportUtils';
 import {
   Music,
@@ -29,6 +30,9 @@ import {
   Check,
   Sparkles,
   BookOpen,
+  PlusCircle,
+  UserCheck,
+  UploadCloud,
 } from 'lucide-react';
 
 interface BayatiCertificationDashboardProps {
@@ -49,6 +53,11 @@ export const BayatiCertificationDashboard: React.FC<BayatiCertificationDashboard
   const [sharingStageId, setSharingStageId] = useState<BayatiStageId | undefined>(undefined);
   const [certificateTeacher, setCertificateTeacher] = useState<TeacherBayatiProfile | null>(null);
 
+  // Musyrif Task Submission Modal State
+  const [isMusyrifModalOpen, setIsMusyrifModalOpen] = useState(false);
+  const [selectedMusyrifForModal, setSelectedMusyrifForModal] = useState<string | undefined>(undefined);
+  const [selectedStageForModal, setSelectedStageForModal] = useState<BayatiStageId | undefined>(undefined);
+
   // Evaluation Edit Modal State
   const [evaluatingTeacher, setEvaluatingTeacher] = useState<TeacherBayatiProfile | null>(null);
   const [evaluatingStageId, setEvaluatingStageId] = useState<BayatiStageId>('stage_doa_fatihah');
@@ -66,12 +75,15 @@ export const BayatiCertificationDashboard: React.FC<BayatiCertificationDashboard
 
   // Filtered teachers list
   const filteredProfiles = bayatiProfiles.filter((t) => {
-    const matchesSearch = t.teacherName.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch =
+      t.teacherName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (t.assignedMusyrif && t.assignedMusyrif.toLowerCase().includes(searchQuery.toLowerCase()));
     const matchesUnit = unitFilter === 'ALL' || t.unit === unitFilter;
     const matchesStatus =
       statusFilter === 'ALL' ||
       (statusFilter === 'CERTIFIED' && t.isFullyCertified) ||
-      (statusFilter === 'IN_PROGRESS' && !t.isFullyCertified);
+      (statusFilter === 'IN_PROGRESS' && !t.isFullyCertified && t.completedStagesCount > 0) ||
+      (statusFilter === 'NOT_SUBMITTED' && t.completedStagesCount === 0);
 
     return matchesSearch && matchesUnit && matchesStatus;
   });
@@ -206,6 +218,20 @@ export const BayatiCertificationDashboard: React.FC<BayatiCertificationDashboard
 
           {/* Collective Action Buttons */}
           <div className="flex flex-wrap items-center gap-2 self-start md:self-auto shrink-0">
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedMusyrifForModal(undefined);
+                setSelectedStageForModal(undefined);
+                setIsMusyrifModalOpen(true);
+              }}
+              className="px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black flex items-center gap-1.5 transition-all shadow-md cursor-pointer ring-2 ring-amber-300/60"
+              title="Input data musyrif yang sudah mengerjakan tugas pengiriman irama Bayati"
+            >
+              <UploadCloud className="w-4 h-4 text-slate-950" />
+              <span>+ Input Tugas Pengiriman Musyrif</span>
+            </button>
+
             <button
               type="button"
               onClick={handleExportCollectivePng}
@@ -404,7 +430,7 @@ export const BayatiCertificationDashboard: React.FC<BayatiCertificationDashboard
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Cari guru..."
+                placeholder="Cari nama musyrif..."
                 className="pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
               />
             </div>
@@ -421,6 +447,30 @@ export const BayatiCertificationDashboard: React.FC<BayatiCertificationDashboard
                 </option>
               ))}
             </select>
+
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700"
+            >
+              <option value="ALL">Semua Status Tugas</option>
+              <option value="CERTIFIED">Sudah Lulus 6/6 (Tuntas)</option>
+              <option value="IN_PROGRESS">Sedang Mengerjakan (1-5)</option>
+              <option value="NOT_SUBMITTED">Belum Kirim Tugas (0/6)</option>
+            </select>
+
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedMusyrifForModal(undefined);
+                setSelectedStageForModal(undefined);
+                setIsMusyrifModalOpen(true);
+              }}
+              className="px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+            >
+              <PlusCircle className="w-3.5 h-3.5" />
+              <span>+ Input Musyrif</span>
+            </button>
           </div>
         </div>
 
@@ -429,7 +479,7 @@ export const BayatiCertificationDashboard: React.FC<BayatiCertificationDashboard
           <table className="w-full text-xs text-left">
             <thead className="bg-slate-100 text-slate-700 font-bold uppercase text-[10px]">
               <tr>
-                <th className="px-3 py-2.5">Nama Guru</th>
+                <th className="px-3 py-2.5">Nama Musyrif / Pendidik</th>
                 <th className="px-2 py-2.5 text-center">1. Doa & Fatihah</th>
                 <th className="px-2 py-2.5 text-center">2. An-Nas - Qari'ah</th>
                 <th className="px-2 py-2.5 text-center">3. 'Adiyat - Syams</th>
@@ -437,7 +487,7 @@ export const BayatiCertificationDashboard: React.FC<BayatiCertificationDashboard
                 <th className="px-2 py-2.5 text-center">5. Insyiqaq - 'Abasa</th>
                 <th className="px-2 py-2.5 text-center">6. Nazi'at - Naba'</th>
                 <th className="px-3 py-2.5 text-center">Skor Rata2</th>
-                <th className="px-3 py-2.5 text-right">Kirim Hasil</th>
+                <th className="px-3 py-2.5 text-right">Aksi & Pengiriman</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -445,9 +495,14 @@ export const BayatiCertificationDashboard: React.FC<BayatiCertificationDashboard
                 <tr key={tp.teacherId} className="hover:bg-slate-50/70">
                   <td className="px-3 py-3">
                     <span className="font-bold text-slate-900 block">{tp.teacherName}</span>
-                    <span className="text-[10px] text-slate-400">
-                      {tp.unit} • {tp.teachingClass}
-                    </span>
+                    <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-slate-400 mt-0.5">
+                      <span>{tp.unit} • {tp.teachingClass}</span>
+                      {tp.assignedMusyrif && (
+                        <span className="text-emerald-700 font-medium bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
+                          Penguji: {tp.assignedMusyrif.replace('Ustadz ', '').replace(', M.Ag.', '')}
+                        </span>
+                      )}
+                    </div>
                   </td>
 
                   {/* 6 Stages Status Buttons */}
@@ -462,11 +517,9 @@ export const BayatiCertificationDashboard: React.FC<BayatiCertificationDashboard
                         <button
                           type="button"
                           onClick={() => {
-                            setEvaluatingTeacher(tp);
-                            setEvaluatingStageId(stg.id);
-                            setEvalScore(sub?.score || 85);
-                            setEvalStatus(sub?.status || 'LULUS');
-                            setEvalNotes(sub?.evaluatorNotes || 'Nada Bayati telah dievaluasi.');
+                            setSelectedMusyrifForModal(tp.teacherId);
+                            setSelectedStageForModal(stg.id);
+                            setIsMusyrifModalOpen(true);
                           }}
                           className={`w-8 h-8 rounded-lg inline-flex items-center justify-center transition-all cursor-pointer ${
                             isPassed
@@ -477,7 +530,7 @@ export const BayatiCertificationDashboard: React.FC<BayatiCertificationDashboard
                               ? 'bg-amber-100 text-amber-800 hover:bg-amber-200'
                               : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
                           }`}
-                          title={`${stg.title}: ${sub?.status || 'BELUM KIRIM'} (Klik untuk nilai/review)`}
+                          title={`${stg.title}: ${sub?.status || 'BELUM KIRIM'} — Skor: ${sub?.score ?? '-'} (Klik untuk input/edit tugas) `}
                         >
                           {isPassed && <CheckCircle2 className="w-4 h-4" />}
                           {isReview && <Clock className="w-4 h-4" />}
@@ -506,9 +559,23 @@ export const BayatiCertificationDashboard: React.FC<BayatiCertificationDashboard
                     </span>
                   </td>
 
-                  {/* Actions: Send Evaluation Report (WhatsApp/Doc/Graphic) & Certificate */}
+                  {/* Actions: Input Tugas Musyrif, Kirim Hasil, & Sertifikat */}
                   <td className="px-3 py-3 text-right">
                     <div className="flex items-center justify-end gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedMusyrifForModal(tp.teacherId);
+                          setSelectedStageForModal(undefined);
+                          setIsMusyrifModalOpen(true);
+                        }}
+                        className="px-2.5 py-1.5 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-800 font-bold text-[11px] inline-flex items-center gap-1 cursor-pointer shadow-2xs border border-teal-200"
+                        title="Input atau update data tugas pengiriman musyrif ini"
+                      >
+                        <Edit3 className="w-3 h-3 text-teal-700" />
+                        <span>Input Tugas</span>
+                      </button>
+
                       <button
                         type="button"
                         onClick={() => {
@@ -516,7 +583,7 @@ export const BayatiCertificationDashboard: React.FC<BayatiCertificationDashboard
                           setSharingStageId('stage_doa_fatihah');
                         }}
                         className="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] inline-flex items-center gap-1 cursor-pointer shadow-2xs"
-                        title="Kirim hasil evaluasi ke guru via WhatsApp / Word / Foto"
+                        title="Kirim hasil evaluasi ke musyrif via WhatsApp / Word / Foto"
                       >
                         <Share2 className="w-3 h-3" />
                         <span>Kirim</span>
@@ -668,6 +735,25 @@ export const BayatiCertificationDashboard: React.FC<BayatiCertificationDashboard
           isOpen={Boolean(certificateTeacher)}
           onClose={() => setCertificateTeacher(null)}
           teacher={certificateTeacher}
+        />
+      )}
+
+      {/* 8. Modal Input Data Musyrif & Tugas Pengiriman */}
+      {isMusyrifModalOpen && (
+        <MusyrifSubmissionModal
+          isOpen={isMusyrifModalOpen}
+          onClose={() => {
+            setIsMusyrifModalOpen(false);
+            setSelectedMusyrifForModal(undefined);
+            setSelectedStageForModal(undefined);
+          }}
+          bayatiProfiles={bayatiProfiles}
+          initialTeacherId={selectedMusyrifForModal}
+          initialStageId={selectedStageForModal}
+          onSave={(updated) => {
+            onUpdateBayatiProfiles(updated);
+            showToast('Data tugas pengiriman musyrif berhasil disimpan!');
+          }}
         />
       )}
     </div>

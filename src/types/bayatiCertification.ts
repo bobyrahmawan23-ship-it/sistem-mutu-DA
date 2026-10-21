@@ -30,6 +30,8 @@ export interface BayatiTaskSubmission {
   evaluatorNotes?: string;
   audioAttachmentName?: string;
   evaluatedAt?: string;
+  musyrifName?: string; // Nama Musyrif / Evaluator Penguji tugas pengiriman
+  musyrifNip?: string;
 }
 
 export interface TeacherBayatiProfile {
@@ -42,4 +44,6 @@ export interface TeacherBayatiProfile {
   completedStagesCount: number; // out of 6
   averageScore: number;
   isFullyCertified: boolean;
+  assignedMusyrif?: string; // Musyrif pembimbing / penguji talaqqi
+  lastSubmissionDate?: string;
 }
