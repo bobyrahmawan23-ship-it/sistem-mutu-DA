@@ -32,6 +32,17 @@ export interface BayatiTaskSubmission {
   evaluatedAt?: string;
   musyrifName?: string; // Nama Musyrif / Evaluator Penguji tugas pengiriman
   musyrifNip?: string;
+  // Recording submissions fields
+  hasSubmittedRecording?: boolean;
+  recordingSubmissionDate?: string;
+  recordingAttachmentName?: string;
+  recordingUrl?: string;
+  recordingNotes?: string;
+  subToneAccuracy?: number;
+  subTajwidAccuracy?: number;
+  subCengkokFluency?: number;
+  subTempoFashohah?: number;
+  evaluatorMusyrifId?: string;
 }
 
 export interface TeacherBayatiProfile {
@@ -45,5 +56,6 @@ export interface TeacherBayatiProfile {
   averageScore: number;
   isFullyCertified: boolean;
   assignedMusyrif?: string; // Musyrif pembimbing / penguji talaqqi
+  assignedMusyrifId?: string;
   lastSubmissionDate?: string;
 }

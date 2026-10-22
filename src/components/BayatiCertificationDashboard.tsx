@@ -10,6 +10,7 @@ import { BayatiShareModal } from './BayatiShareModal';
 import { BayatiCertificateModal } from './BayatiCertificateModal';
 import { BayatiToneWaveDiagram } from './BayatiToneWaveDiagram';
 import { MusyrifSubmissionModal } from './MusyrifSubmissionModal';
+import { BayatiCollectiveRecapModal } from './BayatiCollectiveRecapModal';
 import { exportElementAsPng } from '../utils/exportUtils';
 import {
   Music,
@@ -33,6 +34,8 @@ import {
   PlusCircle,
   UserCheck,
   UploadCloud,
+  Trash2,
+  Users,
 } from 'lucide-react';
 
 interface BayatiCertificationDashboardProps {
@@ -65,12 +68,28 @@ export const BayatiCertificationDashboard: React.FC<BayatiCertificationDashboard
   const [evalStatus, setEvalStatus] = useState<TaskStatus>('LULUS');
   const [evalNotes, setEvalNotes] = useState<string>('Nada Bayati fasih, transisi nada jawab rapi.');
 
+  // Collective Detailed Recap Modal State
+  const [isCollectiveRecapOpen, setIsCollectiveRecapOpen] = useState(false);
+
+  // Delete Musyrif State
+  const [musyrifToDelete, setMusyrifToDelete] = useState<TeacherBayatiProfile | null>(null);
+
   const [isExportingAllChart, setIsExportingAllChart] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
   const showToast = (msg: string) => {
     setToastMsg(msg);
     setTimeout(() => setToastMsg(null), 3000);
+  };
+
+  // Delete Musyrif Handler
+  const handleDeleteMusyrif = (teacherId: string) => {
+    const target = bayatiProfiles.find((t) => t.teacherId === teacherId);
+    const targetName = target?.teacherName || 'Musyrif';
+    const updated = bayatiProfiles.filter((t) => t.teacherId !== teacherId);
+    onUpdateBayatiProfiles(updated);
+    showToast(`Data musyrif "${targetName}" berhasil dihapus.`);
+    setMusyrifToDelete(null);
   };
 
   // Filtered teachers list
@@ -92,6 +111,13 @@ export const BayatiCertificationDashboard: React.FC<BayatiCertificationDashboard
   const totalTeachers = bayatiProfiles.length;
   const certifiedCount = bayatiProfiles.filter((t) => t.isFullyCertified).length;
   const inProgressCount = totalTeachers - certifiedCount;
+  const submittedTeachersCount = bayatiProfiles.filter(
+    (t) =>
+      t.completedStagesCount > 0 ||
+      Object.values(t.submissions).some(
+        (s) => s && (s.status !== 'BELUM_KIRIM' || s.hasSubmittedRecording)
+      )
+  ).length;
 
   // Stage completion statistics (Count who completed each stage)
   const stageStats = BAYATI_STAGES.map((stg) => {
@@ -241,6 +267,16 @@ export const BayatiCertificationDashboard: React.FC<BayatiCertificationDashboard
             >
               <ImageIcon className="w-3.5 h-3.5 text-emerald-300" />
               <span>{isExportingAllChart ? 'Memproses...' : 'Unduh Foto Grafik'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsCollectiveRecapOpen(true)}
+              className="px-4 py-2 rounded-xl bg-teal-400 hover:bg-teal-300 text-slate-950 text-xs font-black flex items-center gap-1.5 transition-all shadow-md cursor-pointer ring-2 ring-teal-300/60"
+              title="Kirim & unduh rekapan detail semua nama musyrif yang telah mengirimkan tugas irama Bayati"
+            >
+              <Users className="w-4 h-4 text-slate-950" />
+              <span>📋 Kirim Rekapan Detail Musyrif</span>
             </button>
 
             <button
@@ -461,6 +497,16 @@ export const BayatiCertificationDashboard: React.FC<BayatiCertificationDashboard
 
             <button
               type="button"
+              onClick={() => setIsCollectiveRecapOpen(true)}
+              className="px-3 py-1.5 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-900 border border-teal-200 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+              title="Kirim dan unduh rekapan detail semua nama musyrif yang telah mengirimkan tugas irama Bayati"
+            >
+              <Users className="w-3.5 h-3.5 text-teal-700" />
+              <span>Rekapan Detail ({submittedTeachersCount} Kirim)</span>
+            </button>
+
+            <button
+              type="button"
               onClick={() => {
                 setSelectedMusyrifForModal(undefined);
                 setSelectedStageForModal(undefined);
@@ -601,6 +647,15 @@ export const BayatiCertificationDashboard: React.FC<BayatiCertificationDashboard
                       >
                         <Award className={`w-3.5 h-3.5 ${tp.isFullyCertified ? 'text-slate-950' : 'text-amber-600'}`} />
                         <span>Sertifikat</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setMusyrifToDelete(tp)}
+                        className="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition-colors cursor-pointer"
+                        title={`Hapus data musyrif ${tp.teacherName} dari Sertifikasi Bayati`}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </td>
@@ -754,6 +809,56 @@ export const BayatiCertificationDashboard: React.FC<BayatiCertificationDashboard
             onUpdateBayatiProfiles(updated);
             showToast('Data tugas pengiriman musyrif berhasil disimpan!');
           }}
+          onDelete={handleDeleteMusyrif}
+        />
+      )}
+
+      {/* 9. Konfirmasi Hapus Data Musyrif */}
+      {musyrifToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-200 overflow-hidden text-xs">
+            <div className="p-5 text-center space-y-3">
+              <div className="w-12 h-12 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-slate-900">Hapus Data Musyrif?</h3>
+                <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                  Apakah Anda yakin ingin menghapus data musyrif <strong className="text-slate-800">{musyrifToDelete.teacherName}</strong> ({musyrifToDelete.unit}) dari Program Sertifikasi Irama Bayati?
+                </p>
+                <div className="mt-3 p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-[11px] text-left">
+                  ⚠️ <strong>Peringatan:</strong> Seluruh riwayat pengiriman tugas 6 klaster surat dan skor nilai musyrif ini akan dihapus secara permanen dari sistem.
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 p-4 bg-slate-50 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setMusyrifToDelete(null)}
+                className="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-200 font-bold cursor-pointer transition-colors"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDeleteMusyrif(musyrifToDelete.teacherId)}
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold flex items-center gap-1.5 shadow-sm cursor-pointer transition-colors"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Ya, Hapus Data Musyrif</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 10. Modal Rekapan Detail Seluruh Musyrif (WhatsApp, Word, Excel) */}
+      {isCollectiveRecapOpen && (
+        <BayatiCollectiveRecapModal
+          isOpen={isCollectiveRecapOpen}
+          onClose={() => setIsCollectiveRecapOpen(false)}
+          bayatiProfiles={bayatiProfiles}
         />
       )}
     </div>

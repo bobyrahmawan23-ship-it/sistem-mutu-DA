@@ -21,6 +21,7 @@ import {
   Sparkles,
   Sliders,
   Check,
+  Trash2,
 } from 'lucide-react';
 
 interface MusyrifSubmissionModalProps {
@@ -30,6 +31,7 @@ interface MusyrifSubmissionModalProps {
   initialTeacherId?: string;
   initialStageId?: BayatiStageId;
   onSave: (updatedProfiles: TeacherBayatiProfile[]) => void;
+  onDelete?: (teacherId: string) => void;
 }
 
 export const MusyrifSubmissionModal: React.FC<MusyrifSubmissionModalProps> = ({
@@ -39,6 +41,7 @@ export const MusyrifSubmissionModal: React.FC<MusyrifSubmissionModalProps> = ({
   initialTeacherId,
   initialStageId,
   onSave,
+  onDelete,
 }) => {
   if (!isOpen) return null;
 
@@ -712,10 +715,29 @@ export const MusyrifSubmissionModal: React.FC<MusyrifSubmissionModalProps> = ({
           )}
 
           {/* Action Buttons */}
-          <div className="flex items-center justify-between pt-3 border-t border-slate-200">
-            <span className="text-[11px] text-slate-500 italic">
-              Data tugas pengiriman akan langsung terbarui di tabel & grafik.
-            </span>
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-200">
+            <div>
+              {!isNewMusyrif && onDelete && currentTeacherObj && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        `Apakah Anda yakin ingin menghapus data musyrif "${currentTeacherObj.teacherName}" (${currentTeacherObj.unit}) dari Dasbor Sertifikasi Bayati?\n\nSeluruh data pengiriman tugas klaster irama Bayati musyrif ini akan dihapus.`
+                      )
+                    ) {
+                      onDelete(currentTeacherObj.teacherId);
+                      onClose();
+                    }
+                  }}
+                  className="px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                  title="Hapus data musyrif ini dari program Sertifikasi Bayati"
+                >
+                  <Trash2 className="w-4 h-4 text-rose-600" />
+                  <span>Hapus Musyrif Ini</span>
+                </button>
+              )}
+            </div>
 
             <div className="flex items-center gap-2">
               <button
